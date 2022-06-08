@@ -1,0 +1,5 @@
+---
+- hosts: ownca
+
+  roles:
+    - { role: ownca }

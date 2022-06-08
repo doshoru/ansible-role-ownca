@@ -1,0 +1,43 @@
+---
+- name: Generate an OpenSSL private key for the Root Cerficate
+  community.crypto.openssl_privatekey:
+    path: '{{ ownca_privkey_dir }}/{{ ansible_fqdn }}.key'
+    format: '{{ ownca_key_format }}'
+    size: '{{ ownca_key_size }}'
+    type: '{{ ownca_key_type }}'
+    passphrase: '{{ ownca_privkey_passphrase }}'
+    cipher: 'auto'
+    owner: 'root'
+    group: 'root'
+    mode: '0400'
+    backup: yes
+
+- name: Generate an OpenSSL CSR for the Root Certificate
+  community.crypto.openssl_csr:
+    path: '{{ ownca_csr_dir }}/{{ ansible_fqdn }}.csr'
+    privatekey_path: '{{ ownca_privkey_dir }}/{{ ansible_fqdn }}.key'
+    privatekey_passphrase: '{{ ownca_privkey_passphrase }}'
+    basic_constraints_critical: '{{ ownca_basic_constraints_critical }}'
+    basic_constraints: '{{ ownca_basic_constraints }}'
+    key_usage_critical: '{{ ownca_key_usage_critical }}'
+    key_usage: '{{ ownca_key_usage }}'
+    country_name: '{{ ownca_dn_country_name }}'
+    state_or_province_name: '{{ ownca_dn_state_name }}'
+    locality_name: '{{ ownca_dn_locality_name }}'
+    organization_name: '{{ ownca_dn_org_name }}'
+    organizational_unit_name: '{{ ownca_dn_org_unit_name }}'
+    common_name: '{{ ownca_common_name|default("Root CA") }}'
+    useCommonNameForSAN: false
+    owner: 'root'
+    group: 'root'
+    mode: '0400'
+    backup: yes
+
+- name: Self-sign the Root Certificate
+  community.crypto.x509_certificate:
+    csr_path: '{{ ownca_csr_dir }}/{{ ansible_fqdn }}.csr'
+    path: '{{ ownca_catrust_dir }}/{{ ansible_fqdn }}.pem'
+    privatekey_path: '{{ ownca_privkey_dir }}/{{ ansible_fqdn }}.key'
+    privatekey_passphrase: '{{ ownca_privkey_passphrase }}'
+    provider: selfsigned
+    backup: yes

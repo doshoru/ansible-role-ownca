@@ -1,0 +1,126 @@
+---
+### Generate the Private Key and CSR
+
+- name: Generate an OpenSSL private key for the cerficate
+  community.crypto.openssl_privatekey:
+    path: '{{ ownca_privkey_dir }}/{{ ansible_fqdn }}.key'
+    format: '{{ ownca_key_format }}'
+    size: '{{ ownca_key_size }}'
+    type: '{{ ownca_key_type }}'
+    passphrase: '{{ ownca_privkey_passphrase }}'
+    cipher: 'auto'
+    owner: 'root'
+    group: 'root'
+    mode: '0440'
+    backup: yes
+
+- name: Generate an OpenSSL CSR for the certificate
+  community.crypto.openssl_csr:
+    path: '{{ ownca_csr_dir }}/{{ ansible_fqdn }}.csr'
+    privatekey_path: '{{ ownca_privkey_dir }}/{{ ansible_fqdn }}.key'
+    privatekey_passphrase: '{{ ownca_privkey_passphrase }}'
+    basic_constraints_critical: yes
+    basic_constraints: '{{ ownca_basic_constraints }}'
+    key_usage_critical: '{{ ownca_key_usage_critical }}'
+    key_usage: '{{ ownca_key_usage }}'
+    country_name: '{{ ownca_dn_country_name }}'
+    state_or_province_name: '{{ ownca_dn_state_name }}'
+    locality_name: '{{ ownca_dn_locality_name }}'
+    organization_name: '{{ ownca_dn_org_name }}'
+    organizational_unit_name: '{{ ownca_dn_org_unit_name }}'
+    common_name: '{{ ownca_common_name|default("Subordinate CA") }}'
+    useCommonNameForSAN: false
+    owner: 'root'
+    group: 'root'
+    mode: '0444'
+    backup: yes
+
+### Copy the CSR to the Root Certificate Authority for signing via the Ansible Server
+
+- name: Fetch the CSR from the client
+  fetch:
+    src: '{{ ownca_csr_dir }}/{{ ansible_fqdn }}.csr'
+    dest: '/tmp/fetched/certs/{{ ansible_fqdn }}.csr'
+    flat: yes
+
+- name: Copy the CSR to the Certificate Authority
+  copy:
+    src: '/tmp/fetched/certs/{{ ansible_fqdn }}.csr'
+    dest: '{{ ownca_csr_dir }}/{{ ansible_fqdn }}.csr'
+  delegate_to: '{{ ownca_rootca }}'
+
+### Sign the Certificate with the Private Key of the Root Certificate Authority
+
+# Note that the variables used will be pulled from the host_vars of the original remote server,
+# instead of the host_vars from the server specified via delegate_to.  For this reason we need
+# to specify the hostvars of the server we are delegating to in order to sign the certificate
+# with HIS private key.
+
+- name: Sign the Certificate
+  community.crypto.x509_certificate:
+    csr_path: '{{ ownca_csr_dir }}/{{ ansible_fqdn }}.csr'
+    path: '{{ ownca_catrust_dir }}/{{ ansible_fqdn }}.pem'
+    ownca_path: '{{ ownca_catrust_dir }}/{{ ownca_rootca }}.pem'
+    ownca_privatekey_path: '{{ ownca_privkey_dir }}/{{ ownca_rootca }}.key'
+    ownca_privatekey_passphrase: '{{ ownca_root_privkey_passphrase }}'
+    provider: ownca
+  delegate_to: '{{ ownca_rootca }}'
+
+### Create the Chain Certificate
+
+- name: Create a chain file from the Subordinate and Root Certificates
+  assemble:
+    src: '{{ ownca_catrust_dir }}'
+    dest: '{{ ownca_catrust_dir }}/{{ ansible_fqdn }}-chain.pem'
+    remote_src: yes
+    regexp: '({{ ansible_fqdn }}.pem$|{{ ownca_rootca }}.pem$)'
+  delegate_to: '{{ ownca_rootca }}'
+
+### Copy the Signed Certificate and Chain to the Subordinate Server via the Ansible Server
+
+- name: Fetch the Subordinate Certificate from the Root CA
+  fetch:
+    src: '{{ ownca_catrust_dir }}/{{ ansible_fqdn }}.pem'
+    dest: '/tmp/fetched/certs/'
+    flat: yes
+  delegate_to: '{{ ownca_rootca }}'
+
+- name: Fetch the Chain Certificate from the Root CA
+  fetch:
+    src: '{{ ownca_catrust_dir }}/{{ ansible_fqdn }}-chain.pem'
+    dest: '/tmp/fetched/certs/'
+    flat: yes
+  delegate_to: '{{ ownca_rootca }}'
+  run_once: yes
+
+- name: Fetch the Root Certificate from the Root CA
+  fetch:
+    src: '{{ ownca_catrust_dir }}/{{ ownca_rootca }}.pem'
+    dest: '/tmp/fetched/certs/'
+    flat: yes
+  delegate_to: '{{ ownca_rootca }}'
+  run_once: yes
+
+- name: Copy the Subordinate Certificate to the Subordinate CA
+  copy:
+    src: '/tmp/fetched/certs/{{ ansible_fqdn }}.pem'
+    dest: '{{ ownca_catrust_dir }}/'
+    owner: 'root'
+    group: 'root'
+    mode: '0640'
+
+- name: Copy the Chain Certificate to the Subordinate CA
+  copy:
+    src: '/tmp/fetched/certs/{{ ansible_fqdn }}-chain.pem'
+    dest: '{{ ownca_catrust_dir }}/'
+    owner: 'root'
+    group: 'root'
+    mode: '0640'
+
+- name: Copy the Root Certificate to the Subordinate CA
+  copy:
+    src: '/tmp/fetched/certs/{{ ownca_rootca }}.pem'
+    dest: '{{ ownca_catrust_dir }}/'
+    owner: 'root'
+    group: 'root'
+    mode: '0640'

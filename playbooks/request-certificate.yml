@@ -1,0 +1,15 @@
+---
+- hosts: all
+  gather_facts: yes
+
+  tasks:
+
+  - name: Request Wildcard Certificate
+    include_tasks: /etc/ansible/roles/ownca/tasks/request-cert.yml
+
+  - name: Request Certificate Chain
+    include_tasks: /etc/ansible/roles/ownca/tasks/request-chain.yml
+
+  handlers:
+  - name: Include Handlers
+    import_tasks : /etc/ansible/roles/ownca/handlers/update-ca-trust.yml

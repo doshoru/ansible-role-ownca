@@ -1,0 +1,40 @@
+---
+### OWNCA CERTIFICATE AUTHORITY VARIABLES
+
+
+# CA Servers for Clients to use when Requesting Certificates
+ownca_rootca:                     'rootca.example.org'
+ownca_signing_ca:                 'subca01.example.org'
+ownca_privkey_passphrase:         "{{ hostvars['subca01.example.org']['ownca_privkey_passphrase'] }}"
+
+
+# CA Server Install Paths
+ownca_csr_dir:                    '/pki/csr'          # Where CSRs are copied to on the CA
+ownca_privkey_dir:                '/pki/private'      # Where the CA's private keys are stored
+ownca_cert_dir:                   '/pki/issued'       # Where signed certs are created
+ownca_catrust_dir:                '/pki/ca-certs'     # Where CA certs and chains are stored
+
+
+# CA Key Standards
+ownca_key_format:                 'pkcs8'
+ownca_key_size:                   '4096'
+ownca_key_type:                   'RSA'
+ownca_key_usage_critical:         'yes'
+ownca_key_usage:
+  - 'digitalSignature'
+  - 'keyEncipherment'
+ownca_extended_key_usage:
+  - 'clientAuth'
+  - 'serverAuth'
+ownca_basic_constraints_critical: 'yes'
+ownca_basic_constraints:
+  - 'CA:FALSE'
+
+
+# CA DN Information
+ownca_dn_country_name:            'US'
+ownca_dn_state_name:              'STATE'
+ownca_dn_locality_name:           'LOCALE'
+ownca_dn_org_name:                'ORGANIZATION'
+ownca_dn_org_unit_name:           'ORG UNIT'
+ownca_dn_email_address:           'hostmaster@example.org'

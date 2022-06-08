@@ -1,0 +1,55 @@
+- name: Fetch the Subordinate Certificate
+  fetch:
+    src: '{{ ownca_catrust_dir }}/{{ ownca_signing_ca }}.pem'
+    dest: '/tmp/fetched/certs/'
+    flat: yes
+  delegate_to: '{{ ownca_signing_ca }}'
+
+- name: Fetch the Root Certificate
+  fetch:
+    src: '{{ ownca_catrust_dir }}/{{ ownca_rootca }}.pem'
+    dest: '/tmp/fetched/certs/'
+    flat: yes
+  delegate_to: '{{ ownca_signing_ca }}'
+  run_once: yes
+
+- name: Fetch the Chain Certificate
+  fetch:
+    src: '{{ ownca_catrust_dir }}/{{ ownca_signing_ca }}-chain.pem'
+    dest: '/tmp/fetched/certs/'
+    flat: yes
+  delegate_to: '{{ ownca_signing_ca }}'
+  run_once: yes
+
+- name: Copy the Subordinate Certificate to the Requester
+  copy:
+    src: '/tmp/fetched/certs/{{ ownca_signing_ca }}.pem'
+    dest: '{{ ownca_client_catrust_dir }}/'
+    owner: 'root'
+    group: 'root'
+    mode: '0640'
+  notify:
+    - update ca-trust debian
+    - update ca-trust redhat
+
+- name: Copy the Root Certificate to the Requester
+  copy:
+    src: '/tmp/fetched/certs/{{ ownca_rootca }}.pem'
+    dest: '{{ ownca_client_catrust_dir }}/'
+    owner: 'root'
+    group: 'root'
+    mode: '0640'
+  notify:
+    - update ca-trust debian
+    - update ca-trust redhat
+
+- name: Copy the Chain Certificate to the Requester
+  copy:
+    src: '/tmp/fetched/certs/{{ ownca_signing_ca }}-chain.pem'
+    dest: '{{ ownca_client_catrust_dir }}/'
+    owner: 'root'
+    group: 'root'
+    mode: '0640'
+  notify:
+    - update ca-trust debian
+    - update ca-trust redhat

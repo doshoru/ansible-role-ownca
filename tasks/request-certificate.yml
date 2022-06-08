@@ -1,0 +1,85 @@
+### Generate the Private Key and CSR
+
+- name: Generate an OpenSSL private key for the cerficate
+  community.crypto.openssl_privatekey:
+    path: '{{ ownca_client_privkey_dir }}/{{ ownca_cert_name | default(ansible_fqdn) }}.key'
+    format: '{{ ownca_key_format }}'
+    size: '{{ ownca_key_size }}'
+    type: '{{ ownca_key_type }}'
+    passphrase: '{{ ownca_client_privkey_passphrase | default(omit) }}'
+    cipher: "{{ 'auto' if ownca_client_privkey_passphrase is defined else omit }}"
+    owner: 'root'
+    group: 'root'
+    mode: '0440'
+    backup: yes
+
+- name: Generate an OpenSSL CSR for the certificate
+  community.crypto.openssl_csr:
+    path: '{{ ownca_client_csr_dir }}/{{ ownca_cert_name | default(ansible_fqdn) }}.csr'
+    privatekey_path: '{{ ownca_client_privkey_dir }}/{{ ownca_cert_name | default(ansible_fqdn) }}.key'
+    privatekey_passphrase: '{{ ownca_client_privkey_passphrase | default(omit) }}'
+    basic_constraints_critical: '{{ ownca_basic_constraints_critical|default("yes") }}'
+    basic_constraints: '{{ ownca_basic_constraints|default("CA:FALSE") }}'
+    key_usage_critical: '{{ ownca_key_usage_critical|default("yes") }}'
+    key_usage: '{{ ownca_key_usage|default(default_key_usage) }}'
+    extended_key_usage: '{{ ownca_extended_key_usage|default("default_extended_key_usage") }}'
+    country_name: '{{ ownca_dn_country_name|default("US") }}'
+    state_or_province_name: '{{ ownca_dn_state_name|default("State") }}'
+    locality_name: '{{ ownca_dn_locality_name|default("Locale") }}'
+    organization_name: '{{ ownca_dn_org_name|default("Organization") }}'
+    organizational_unit_name: '{{ ownca_dn_org_unit_name|default("OrgUnit") }}'
+    common_name: '{{ ownca_common_name }}'
+    owner: 'root'
+    group: 'root'
+    mode: '0444'
+    backup: yes
+  vars:
+    default_key_usage:
+      - digitalSignature
+      - keyEncipherment
+    default_extended_key_usage:
+      - clientAuth
+      - serverAuth
+
+### Copy the CSR to the Subordinate Certificate Authority for signing via the Ansible Server
+
+- name: Fetch the CSR from the client
+  fetch:
+    src: '{{ ownca_client_csr_dir }}/{{ ownca_cert_name | default(ansible_fqdn) }}.csr'
+    dest: '/tmp/fetched/certs/{{ ownca_cert_name | default(ansible_fqdn) }}.csr'
+    flat: yes
+
+- name: Copy the CSR to the Certificate Authority
+  copy:
+    src: '/tmp/fetched/certs/{{ ownca_cert_name | default(ansible_fqdn) }}.csr'
+    dest: '{{ ownca_csr_dir }}/{{ ownca_cert_name | default(ansible_fqdn) }}.csr'
+  delegate_to: '{{ ownca_signing_ca }}'
+
+### Sign the Certificate with the Private Key of the Subordinate Certificate Authority
+
+- name: Sign the Certificate
+  community.crypto.x509_certificate:
+    csr_path: '{{ ownca_csr_dir }}/{{ ownca_cert_name | default(ansible_fqdn) }}.csr'
+    path: '{{ ownca_cert_dir }}/{{ ownca_cert_name | default(ansible_fqdn) }}.pem'
+    ownca_path: '{{ ownca_catrust_dir }}/{{ ownca_signing_ca }}.pem'
+    ownca_privatekey_path: '{{ ownca_privkey_dir }}/{{ ownca_signing_ca }}.key'
+    ownca_privatekey_passphrase: '{{ ownca_privkey_passphrase }}'
+    provider: ownca
+  delegate_to: '{{ ownca_signing_ca }}'
+
+### Return the Signed Certificate to the Requester via the Ansible Server
+
+- name: Fetch the Signed Certificate from the Certificate Authority
+  fetch:
+    src: '{{ ownca_cert_dir }}/{{ ownca_cert_name | default(ansible_fqdn) }}.pem'
+    dest: '/tmp/fetched/certs/{{ ownca_cert_name | default(ansible_fqdn) }}.pem'
+    flat: yes
+  delegate_to: '{{ ownca_signing_ca }}'
+
+- name: Copy the Signed Certificate to the Server
+  copy:
+    src: '/tmp/fetched/certs/{{ ownca_cert_name | default(ansible_fqdn) }}.pem'
+    dest: '{{ ownca_client_cert_dir }}/{{ ownca_cert_name | default(ansible_fqdn) }}.pem'
+    owner: 'root'
+    group: 'root'
+    mode: '0640'

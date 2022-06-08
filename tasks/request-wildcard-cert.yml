@@ -1,0 +1,40 @@
+- name: Determine which host will originate the Wildcard Cert Request
+  shell: echo $HOSTNAME
+  register: cert_requestor
+  changed_when: false
+  run_once: yes
+
+- name: Request Certificate
+  include_tasks: /etc/ansible/roles/ownca/tasks/request-certificate.yml
+  when: cert_requestor.stdout == inventory_hostname
+
+- name: Fetch the Signed Certificate from the Certificate Authority
+  fetch:
+    src: '{{ ownca_cert_dir }}/{{ ownca_cert_name | default(ansible_fqdn) }}.pem'
+    dest: '/tmp/fetched/certs/{{ ownca_cert_name | default(ansible_fqdn) }}.pem'
+    flat: yes
+  delegate_to: '{{ ownca_signing_ca }}'
+
+- name: Copy the Signed Wildcard Certificate to the other hosts
+  copy:
+    src: '/tmp/fetched/certs/{{ ownca_cert_name | default(ansible_fqdn) }}.pem'
+    dest: '{{ ownca_client_cert_dir }}/{{ ownca_cert_name | default(ansible_fqdn) }}.pem'
+    owner: 'root'
+    group: 'root'
+    mode: '0640'
+
+- name: Fetch Private Key from Requestor
+  fetch:
+    src: '{{ ownca_client_privkey_dir }}/{{ ownca_cert_name | default(ansible_fqdn) }}.key'
+    dest: '/tmp/fetched/private/{{ ownca_cert_name | default(ansible_fqdn) }}.key'
+    flat: yes
+  when: cert_requestor.stdout == inventory_hostname
+
+- name: Copy Private Key to other hosts
+  copy:
+    src: '/tmp/fetched/private/{{ ownca_cert_name | default(ansible_fqdn) }}.key'
+    dest: '{{ ownca_client_privkey_dir }}/{{ ownca_cert_name | default(ansible_fqdn) }}.key'
+    owner: 'root'
+    group: 'root'
+    mode: '0640'
+  when: cert_requestor.stdout != inventory_hostname

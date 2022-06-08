@@ -1,0 +1,21 @@
+---
+### OWNCA Certificate Authority variables
+# NOTE:  This vars file should ONLY be used when applying the pki_servers role -- e.g. used by the
+# CA servers themselves in the implementation of the pki_servers role.  Variables required by
+# PKI *CLIENTS* should be placed in a "global" group_vars file.
+    
+# CA Servers
+ownca_root_privkey_passphrase:    "{{ hostvars['rootca.example.org']['ownca_privkey_passphrase'] }}"
+ownca_subca_servers:
+  - subca01.example.org
+
+# CA Key Standards
+ownca_key_usage:
+  - 'keyCertSign'
+  - 'cRLSign'
+ownca_basic_constraints:
+  - 'CA:TRUE'
+    
+# CA DN Information
+ownca_dn_org_unit_name:           'OWNCA CERTIFICATE AUTHORITY'
+ownca_dn_email_address:           'hostmaster@example.org'

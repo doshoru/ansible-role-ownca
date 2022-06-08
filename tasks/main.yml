@@ -1,0 +1,42 @@
+---
+### Create the directory structure for the PKI
+
+- name: Create directory to store CA certificates
+  file:
+    path: "{{ ownca_catrust_dir }}"
+    state: directory
+    group: 'root'
+    owner: 'root'
+    mode: '0755'
+
+- name: Create directory to store CA private key
+  file:
+    path: '{{ ownca_privkey_dir }}'
+    state: directory
+    group: 'root'
+    owner: 'root'
+    mode: '0700'
+
+- name: Create CSR directory
+  file:
+    path: '{{ ownca_csr_dir }}'
+    state: directory
+    group: 'root'
+    owner: 'root'
+    mode: '0755'
+
+- name: Create directory for issued certificates
+  file:
+    path: '{{ ownca_cert_dir }}'
+    state: directory
+    group: 'root'
+    owner: 'root'
+    mode: '0755'
+
+- name: Create Root CA
+  include_tasks: create-rootca.yml
+  when: inventory_hostname in ownca_rootca
+
+- name: Create Subordinate CAs
+  include_tasks: create-subca.yml
+  when: inventory_hostname in ownca_subca_servers
