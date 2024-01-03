@@ -1,0 +1,8 @@
+---
+ownca_client_privkey_dir: /etc/pki/tls/private
+ownca_client_csr_dir:     /etc/pki/tls/
+ownca_client_cert_dir:    /etc/pki/tls/certs
+ownca_client_catrust_dir: /etc/pki/ca-trust/source/anchors
+
+# This variable should be set to pem for RedHat and crt for Ubuntu.
+ownca_distribution_ext: pem
