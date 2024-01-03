@@ -1,0 +1,8 @@
+---
+ownca_client_privkey_dir: /etc/ssl/private
+ownca_client_csr_dir:     /etc/ssl/
+ownca_client_cert_dir:    /etc/ssl/certs
+ownca_client_catrust_dir: /usr/local/share/ca-certificates
+
+# This variable should be set to pem for RedHat and crt for Ubuntu.
+ownca_distribution_ext: crt
