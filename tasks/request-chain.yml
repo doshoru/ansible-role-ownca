@@ -24,7 +24,7 @@
 - name: Copy the Subordinate Certificate to the Requester
   copy:
     src: '/tmp/fetched/certs/{{ ownca_signing_ca }}.pem'
-    dest: '{{ ownca_client_catrust_dir }}/'
+    dest: '{{ ownca_client_catrust_dir }}/{{ ownca_signing_ca }}.{{ ownca_distribution_ext }}'
     owner: 'root'
     group: 'root'
     mode: '0640'
@@ -35,7 +35,7 @@
 - name: Copy the Root Certificate to the Requester
   copy:
     src: '/tmp/fetched/certs/{{ ownca_rootca }}.pem'
-    dest: '{{ ownca_client_catrust_dir }}/'
+    dest: '{{ ownca_client_catrust_dir }}/{{ ownca_rootca }}.{{ ownca_distribution_ext }}'
     owner: 'root'
     group: 'root'
     mode: '0640'
@@ -46,7 +46,7 @@
 - name: Copy the Chain Certificate to the Requester
   copy:
     src: '/tmp/fetched/certs/{{ ownca_signing_ca }}-chain.pem'
-    dest: '{{ ownca_client_catrust_dir }}/'
+    dest: '{{ ownca_client_catrust_dir }}/{{ ownca_signing_ca }}-chain.{{ ownca_distribution_ext }}'
     owner: 'root'
     group: 'root'
     mode: '0640'
