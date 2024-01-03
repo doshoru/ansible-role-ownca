@@ -1,5 +1,9 @@
+- name: Import Cert Store variables for distribution
+  include_vars: '../vars/{{ ansible_os_family }}.yml'
+
 - name: Determine which host will originate the Wildcard Cert Request
-  shell: echo $HOSTNAME
+  shell:
+    cmd: hostname
   register: cert_requestor
   changed_when: false
   run_once: yes
