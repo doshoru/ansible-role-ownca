@@ -1,5 +1,8 @@
 ### Generate the Private Key and CSR
 
+- name: Import Cert Store variables for distribution
+  include_vars: '../vars/{{ ansible_os_family }}.yml'
+
 - name: Generate an OpenSSL private key for the cerficate
   community.crypto.openssl_privatekey:
     path: '{{ ownca_client_privkey_dir }}/{{ ownca_cert_name | default(ansible_fqdn) }}.key'
